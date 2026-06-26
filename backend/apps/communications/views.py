@@ -112,14 +112,16 @@ class SendEmailView(_SendBase):
         return Response({"sent": sent, "failed": failed, "total": len(recipients)})
 
 
-class CommunicationLogViewSet(viewsets.ReadOnlyModelViewSet):
+class CommunicationLogViewSet(viewsets.ModelViewSet):
     queryset = CommunicationLog.objects.select_related("customer", "sender").all()
     serializer_class = CommunicationLogSerializer
     permission_classes = [permissions.IsAuthenticated, HasRolePermission]
+    http_method_names = ("get", "delete", "head", "options")
     search_fields = ("customer__full_name", "customer__phone", "customer__email", "message", "subject")
     ordering_fields = ("created_at", "sent_at", "channel", "status")
     filterset_fields = ("channel", "status", "customer")
     required_roles = {
         "list": (SUPER_ADMIN, CS_OFFICER, OPERATIONS, MANAGER),
         "retrieve": (SUPER_ADMIN, CS_OFFICER, OPERATIONS, MANAGER),
+        "destroy": (SUPER_ADMIN,),
     }

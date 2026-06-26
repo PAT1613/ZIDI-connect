@@ -53,8 +53,16 @@ export default function Users() {
       delete payload.created_at; delete payload.updated_at;
       return editing?.id ? updateUser(editing.id, payload) : createUser(payload);
     },
-    onSuccess: () => {
-      toast.success('Saved');
+    onSuccess: (data) => {
+      if (!editing?.id) {
+        const roleName = data?.role?.name || 'user';
+        toast.success(
+          `${data?.email} created as ${roleName}. Share their login credentials so they can sign in.`,
+          { duration: 6000 },
+        );
+      } else {
+        toast.success('User updated');
+      }
       qc.invalidateQueries({ queryKey: ['users'] });
       setEditing(null);
     },
@@ -109,6 +117,46 @@ export default function Users() {
           </Button>
         ) : null}
       />
+      <details className="card-base mb-3 p-4 text-xs text-slate-600">
+        <summary className="cursor-pointer font-semibold text-slate-800">Role &amp; module access reference</summary>
+        <div className="mt-3 overflow-x-auto">
+          <table className="min-w-full text-left">
+            <thead className="text-[10px] uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="py-1 pr-3">Module</th>
+                <th className="py-1 px-2">Super Admin</th>
+                <th className="py-1 px-2">CS Officer</th>
+                <th className="py-1 px-2">Finance</th>
+                <th className="py-1 px-2">Operations</th>
+                <th className="py-1 px-2">Manager</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {[
+                ['Customers', 'CRUD', 'CRUD', 'R', 'R', 'R'],
+                ['Services', 'CRUD', 'R', 'R', 'CRUD', 'R'],
+                ['Subscriptions', 'CRUD', 'CRUD', 'R', 'CRUD', 'R'],
+                ['Invoices', 'CRUD', 'R', 'CRUD', 'R', 'R'],
+                ['Payments', 'CRUD', '—', 'CRUD', '—', 'R'],
+                ['Communications', 'CRUD', 'CRUD', '—', 'CRUD', 'R'],
+                ['Escalations', 'CRUD', 'CRUD', 'R', 'CRUD', 'CRUD'],
+                ['Notifications', 'CRUD', 'R', 'R', 'R', 'R'],
+                ['Reports', 'All', 'Cust/Comms', 'Finance', 'Service', 'All'],
+                ['Users / Roles', 'CRUD', '—', '—', '—', 'R'],
+                ['Audit Logs', 'R', '—', '—', '—', 'R'],
+              ].map(([mod, ...cells]) => (
+                <tr key={mod}>
+                  <td className="py-1.5 pr-3 font-medium text-slate-800">{mod}</td>
+                  {cells.map((c, i) => (
+                    <td key={i} className={`py-1.5 px-2 ${c === '—' ? 'text-slate-400' : ''}`}>{c}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-[11px] text-slate-500">CRUD = create/read/update/delete · R = read-only · — = no access</p>
+        </div>
+      </details>
       <ListToolbar
         search={list.search}
         onSearchChange={list.setSearch}
@@ -151,11 +199,15 @@ export default function Users() {
             <Input value={form.phone || ''}
                    onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </FormField>
-          <FormField label="Role">
-            <Select value={form.role_id || ''} options={roleOptions}
+          <FormField label="Role" required hint="Determines which modules this user can access">
+            <Select value={form.role_id || ''} options={roleOptions} placeholder="Select a role"
                     onChange={(e) => setForm({ ...form, role_id: e.target.value })} />
           </FormField>
-          <FormField label={editing?.id ? 'Reset password (optional)' : 'Password'} required={!editing?.id}>
+          <FormField
+            label={editing?.id ? 'Reset password (optional)' : 'Password'}
+            required={!editing?.id}
+            hint={editing?.id ? 'Leave empty to keep current password' : 'Share this with the user — they sign in with email + password'}
+          >
             <Input type="password" value={form.password || ''}
                    onChange={(e) => setForm({ ...form, password: e.target.value })} />
           </FormField>

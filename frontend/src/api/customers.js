@@ -28,3 +28,8 @@ export async function deactivateCustomer(id) {
   const { data } = await api.post(`/customers/${id}/deactivate/`);
   return data;
 }
+
+export async function purgeCustomer(id) {
+  const { data } = await api.delete(`/customers/${id}/purge/`);
+  return data;
+}

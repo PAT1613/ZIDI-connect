@@ -1,5 +1,6 @@
 from rest_framework import permissions, viewsets
 
+from apps.common.mixins import SuperAdminCascadeDestroyMixin
 from apps.common.permissions import (
     CS_OFFICER,
     FINANCE,
@@ -13,7 +14,7 @@ from .models import Service
 from .serializers import ServiceSerializer
 
 
-class ServiceViewSet(viewsets.ModelViewSet):
+class ServiceViewSet(SuperAdminCascadeDestroyMixin, viewsets.ModelViewSet):
     queryset = Service.objects.all()
     serializer_class = ServiceSerializer
     permission_classes = [permissions.IsAuthenticated, HasRolePermission]

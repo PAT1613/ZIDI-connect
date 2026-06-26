@@ -6,6 +6,7 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.common.mixins import SuperAdminCascadeDestroyMixin
 from apps.common.permissions import (
     CS_OFFICER,
     FINANCE,
@@ -19,7 +20,7 @@ from .models import CustomerService
 from .serializers import CustomerServiceSerializer
 
 
-class CustomerServiceViewSet(viewsets.ModelViewSet):
+class CustomerServiceViewSet(SuperAdminCascadeDestroyMixin, viewsets.ModelViewSet):
     queryset = CustomerService.objects.select_related("customer", "service").all()
     serializer_class = CustomerServiceSerializer
     permission_classes = [permissions.IsAuthenticated, HasRolePermission]

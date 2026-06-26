@@ -14,3 +14,7 @@ export async function listCommsLogs(params = {}) {
   const { data } = await api.get('/communications/logs/', { params });
   return data;
 }
+
+export async function deleteCommsLog(id) {
+  await api.delete(`/communications/logs/${id}/`);
+}

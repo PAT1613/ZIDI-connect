@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 
+from apps.common.mixins import SuperAdminCascadeDestroyMixin
 from apps.common.permissions import (
     CS_OFFICER,
     FINANCE,
@@ -18,7 +19,7 @@ from .pdf import render_invoice_pdf
 from .serializers import InvoiceSerializer, PaymentSerializer
 
 
-class InvoiceViewSet(viewsets.ModelViewSet):
+class InvoiceViewSet(SuperAdminCascadeDestroyMixin, viewsets.ModelViewSet):
     queryset = Invoice.objects.select_related("customer", "customer_service__service").prefetch_related("payments").all()
     serializer_class = InvoiceSerializer
     permission_classes = [permissions.IsAuthenticated, HasRolePermission]
@@ -44,11 +45,11 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         return response
 
 
-class PaymentViewSet(viewsets.ModelViewSet):
+class PaymentViewSet(SuperAdminCascadeDestroyMixin, viewsets.ModelViewSet):
     queryset = Payment.objects.select_related("invoice", "received_by").all()
     serializer_class = PaymentSerializer
     permission_classes = [permissions.IsAuthenticated, HasRolePermission]
-    http_method_names = ("get", "post", "head", "options")
+    http_method_names = ("get", "post", "delete", "head", "options")
     search_fields = ("invoice__invoice_number", "reference")
     ordering_fields = ("paid_at", "amount")
     filterset_fields = ("method", "invoice")
@@ -56,4 +57,5 @@ class PaymentViewSet(viewsets.ModelViewSet):
         "list": (SUPER_ADMIN, FINANCE, MANAGER),
         "retrieve": (SUPER_ADMIN, FINANCE, MANAGER),
         "create": (SUPER_ADMIN, FINANCE),
+        "destroy": (SUPER_ADMIN,),
     }

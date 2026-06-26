@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+from django.db.models import ProtectedError, RestrictedError
 from django.http import Http404
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
@@ -24,6 +25,14 @@ def zidi_exception_handler(exc, context):
         return Response({"detail": "Not found."}, status=404)
     if isinstance(exc, DjangoPermissionDenied):
         return Response({"detail": "Permission denied."}, status=403)
+    if isinstance(exc, (ProtectedError, RestrictedError)):
+        related = getattr(exc, "protected_objects", None) or getattr(exc, "restricted_objects", None) or []
+        modules = sorted({type(obj)._meta.verbose_name_plural.lower() for obj in related})
+        what = ", ".join(modules) if modules else "related records"
+        return Response(
+            {"detail": f"Cannot delete — {what} reference this record. Deactivate it instead, or remove the related records first."},
+            status=409,
+        )
     if isinstance(exc, APIException):
         return Response({"detail": str(exc)}, status=exc.status_code)
 

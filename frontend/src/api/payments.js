@@ -14,3 +14,7 @@ export async function createPayment(payload) {
   const { data } = await api.post('/payments/', payload);
   return data;
 }
+
+export async function deletePayment(id) {
+  await api.delete(`/payments/${id}/`);
+}

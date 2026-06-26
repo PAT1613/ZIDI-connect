@@ -1,18 +1,20 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Send, MessageSquare, Mail } from 'lucide-react';
+import { Send, MessageSquare, Mail, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
-import { sendSms, sendEmail, listCommsLogs } from '../api/communications';
+import { sendSms, sendEmail, listCommsLogs, deleteCommsLog } from '../api/communications';
 import { listCustomers } from '../api/customers';
 import { useListQuery } from '../hooks/useListQuery';
-import { RECIPIENT_FILTERS } from '../lib/constants';
+import { useAuth } from '../hooks/useAuth';
+import { RECIPIENT_FILTERS, ROLES } from '../lib/constants';
 import { extractError } from '../api/client';
 import PageHeader from '../components/layout/PageHeader';
 import ListToolbar from '../components/layout/ListToolbar';
 import Table from '../components/ui/Table';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import FormField from '../components/ui/FormField';
 import Input from '../components/ui/Input';
 import Textarea from '../components/ui/Textarea';
@@ -22,11 +24,14 @@ import { formatDateTime } from '../lib/format';
 
 export default function Communications() {
   const qc = useQueryClient();
+  const { hasRole, user } = useAuth();
+  const canDelete = user?.is_superuser || hasRole([ROLES.SUPER_ADMIN]);
   const [channel, setChannel] = useState('sms');
   const [filter, setFilter] = useState('selected');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [selected, setSelected] = useState([]);
+  const [confirming, setConfirming] = useState(null);
 
   const { data: customers } = useQuery({
     queryKey: ['customers', 'lookup'],
@@ -56,6 +61,16 @@ export default function Communications() {
     onError: (e) => toast.error(extractError(e)),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteCommsLog(confirming.id),
+    onSuccess: () => {
+      toast.success('Log entry deleted');
+      qc.invalidateQueries({ queryKey: ['comms-logs'] });
+      setConfirming(null);
+    },
+    onError: (e) => toast.error(extractError(e)),
+  });
+
   const columns = [
     { key: 'created_at', header: 'When', sortable: true, render: (r) => formatDateTime(r.created_at) },
     { key: 'channel', header: 'Channel', render: (r) => <Badge color="brand">{r.channel.toUpperCase()}</Badge> },
@@ -66,6 +81,14 @@ export default function Communications() {
       render: (r) => <span className="block max-w-md truncate" title={r.message}>{r.message}</span>,
     },
     { key: 'status', header: 'Status', render: (r) => <Badge status={r.status} /> },
+    {
+      key: 'actions', header: '', align: 'right',
+      render: (r) => canDelete ? (
+        <Button variant="ghost" size="sm" onClick={() => setConfirming(r)} aria-label="Delete">
+          <Trash2 className="h-3.5 w-3.5 text-red-600" />
+        </Button>
+      ) : null,
+    },
   ];
 
   return (
@@ -151,6 +174,16 @@ export default function Communications() {
           />
         </div>
       </div>
+      <ConfirmDialog
+        open={!!confirming}
+        onClose={() => setConfirming(null)}
+        onConfirm={() => deleteMutation.mutate()}
+        loading={deleteMutation.isPending}
+        title="Delete log entry?"
+        description={confirming ? `Remove the ${confirming.channel.toUpperCase()} log to ${confirming.customer_name}?` : ''}
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </>
   );
 }

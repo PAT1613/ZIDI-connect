@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { createPayment, listPayments } from '../api/payments';
+import { createPayment, deletePayment, listPayments } from '../api/payments';
 import { listInvoices } from '../api/invoices';
 import { useListQuery } from '../hooks/useListQuery';
 import { useAuth } from '../hooks/useAuth';
@@ -13,6 +13,7 @@ import ListToolbar from '../components/layout/ListToolbar';
 import Table from '../components/ui/Table';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import FormField from '../components/ui/FormField';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
@@ -24,6 +25,7 @@ const EMPTY = { invoice: '', amount: '', method: 'mobile_money', reference: '' }
 export default function Payments() {
   const { hasRole, user } = useAuth();
   const canWrite = user?.is_superuser || hasRole([ROLES.SUPER_ADMIN, ROLES.FINANCE]);
+  const canDelete = user?.is_superuser || hasRole([ROLES.SUPER_ADMIN]);
   const qc = useQueryClient();
 
   const list = useListQuery(['payments'], listPayments);
@@ -41,6 +43,7 @@ export default function Payments() {
   );
 
   const [creating, setCreating] = useState(false);
+  const [confirming, setConfirming] = useState(null);
   const [form, setForm] = useState(EMPTY);
 
   const saveMutation = useMutation({
@@ -54,6 +57,17 @@ export default function Payments() {
     onError: (e) => toast.error(extractError(e)),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => deletePayment(confirming.id),
+    onSuccess: () => {
+      toast.success('Payment deleted');
+      qc.invalidateQueries({ queryKey: ['payments'] });
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      setConfirming(null);
+    },
+    onError: (e) => toast.error(extractError(e)),
+  });
+
   const columns = [
     { key: 'paid_at', header: 'When', sortable: true, render: (r) => formatDateTime(r.paid_at) },
     { key: 'invoice_number', header: 'Invoice' },
@@ -61,6 +75,14 @@ export default function Payments() {
     { key: 'method', header: 'Method', render: (r) => <Badge color="brand">{r.method.replace('_', ' ')}</Badge> },
     { key: 'reference', header: 'Reference' },
     { key: 'received_by_name', header: 'Received by' },
+    {
+      key: 'actions', header: '', align: 'right',
+      render: (r) => canDelete ? (
+        <Button variant="ghost" size="sm" onClick={() => setConfirming(r)} aria-label="Delete">
+          <Trash2 className="h-3.5 w-3.5 text-red-600" />
+        </Button>
+      ) : null,
+    },
   ];
 
   return (
@@ -122,6 +144,18 @@ export default function Payments() {
           </FormField>
         </div>
       </Modal>
+      <ConfirmDialog
+        open={!!confirming}
+        onClose={() => setConfirming(null)}
+        onConfirm={() => deleteMutation.mutate()}
+        loading={deleteMutation.isPending}
+        title="Delete payment?"
+        description={confirming
+          ? `Delete payment of ${formatCurrency(confirming.amount)} on invoice ${confirming.invoice_number}? The invoice's paid status will not be auto-updated.`
+          : ''}
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </>
   );
 }
