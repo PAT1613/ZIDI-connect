@@ -91,7 +91,14 @@ WSGI_APPLICATION = "zidi_connect.wsgi.application"
 ASGI_APPLICATION = "zidi_connect.asgi.application"
 
 _pg_url = os.environ.get("DATABASE_URL")
-if _pg_url:
+if env_bool("USE_SQLITE", False):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+elif _pg_url:
     DATABASES = {"default": dj_database_url.parse(_pg_url, conn_max_age=600)}
 else:
     DATABASES = {
@@ -106,14 +113,22 @@ else:
         }
     }
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+REDIS_URL = os.environ.get("REDIS_URL", "")
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": REDIS_URL,
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "zidi-connect-local",
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

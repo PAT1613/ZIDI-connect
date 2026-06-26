@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where python *)",
+      "Bash(py -3 -c \"import sys; print\\(sys.version\\)\")",
+      "Bash(py -3 -c \"import django; print\\(django.get_version\\(\\)\\)\")",
+      "Bash(py -3 -c \"import os; os.environ.setdefault\\('DJANGO_SETTINGS_MODULE', 'zidi_connect.settings'\\); os.environ.setdefault\\('POSTGRES_HOST','localhost'\\); import django; django.setup\\(\\); from django.core.management import call_command; call_command\\('check'\\)\")",
+      "Bash(where docker *)",
+      "Bash(py -3 -m pip install --user --quiet celery django-celery-beat django-cors-headers django-filter drf-spectacular djangorestframework djangorestframework-simplejwt dj-database-url python-dotenv redis africastalking reportlab openpyxl psycopg[binary] django-model-utils)",
+      "Bash(py -3 -c \"import os; os.environ.setdefault\\('DJANGO_SETTINGS_MODULE', 'zidi_connect.settings'\\); os.environ.setdefault\\('POSTGRES_HOST','localhost'\\); import django; django.setup\\(\\); from django.core.management import call_command; call_command\\('makemigrations', dry_run=True, verbosity=2\\)\")",
+      "Bash(py -3 -c \"import os; os.environ.setdefault\\('DJANGO_SETTINGS_MODULE', 'zidi_connect.settings'\\); os.environ.setdefault\\('POSTGRES_HOST','localhost'\\); import django; django.setup\\(\\); from django.core.management import call_command; call_command\\('makemigrations'\\)\")",
+      "Bash(py -3 -c 'import os; os.environ.setdefault\\('\\\\''DJANGO_SETTINGS_MODULE'\\\\'', '\\\\''zidi_connect.settings'\\\\''\\); os.environ.setdefault\\('\\\\''POSTGRES_HOST'\\\\'','\\\\''localhost'\\\\''\\); import django; django.setup\\(\\); from django.urls import get_resolver; r = get_resolver\\(\\); from django.urls import URLResolver, URLPattern; def walk\\(node, prefix='\\\\'''\\\\''\\): *)",
+      "Bash(py -3 _check_urls.py)",
+      "Bash(where node *)",
+      "Bash(npx vite *)",
+      "Bash(docker info *)",
+      "Bash(echo \"Docker is ready: $\\(docker info --format '{{.ServerVersion}}'\\)\")",
+      "Bash(py -3 manage.py migrate)",
+      "Bash(py -3 manage.py seed_roles)",
+      "Bash(py -3 -c ' *)",
+      "Bash(py -3 manage.py runserver 0.0.0.0:8000 --noreload)",
+      "Bash(curl -fsS http://localhost:8000/api/v1/auth/me/ -o /dev/null)",
+      "Bash(curl -fsS http://localhost:8000/admin/ -o /dev/null)",
+      "Bash(curl -fsS http://localhost:5173/ -o /dev/null)",
+      "Bash(curl -s -X POST http://localhost:8000/api/v1/auth/login/ -H \"Content-Type: application/json\" -d '{\"email\":\"admin@zidi.local\",\"password\":\"ChangeMe!123\"}')",
+      "Bash(curl *)",
+      "Bash(netstat -ano)"
+    ]
+  }
+}
