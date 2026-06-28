@@ -1,6 +1,34 @@
 from rest_framework import serializers
 
-from .models import CommunicationLog
+from .models import CommunicationLog, IntegrationSetting
+
+
+class IntegrationSettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IntegrationSetting
+        fields = ("key", "value")
+
+
+class IntegrationSettingsBulkSerializer(serializers.Serializer):
+    """Accepts {key: value, ...} for updating multiple settings at once.
+
+    Blank values mean 'clear the DB override' (env or default takes over).
+    """
+
+    settings = serializers.DictField(
+        child=serializers.CharField(allow_blank=True, required=False),
+    )
+
+
+class TestSMSSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20)
+    message = serializers.CharField(max_length=480, required=False, default="ZIDI Connect test message ✓")
+
+
+class TestEmailSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    subject = serializers.CharField(max_length=160, required=False, default="ZIDI Connect test email")
+    message = serializers.CharField(required=False, default="This is a test email from ZIDI Connect. If you received this, your SMTP settings are working.")
 
 
 class CommunicationLogSerializer(serializers.ModelSerializer):

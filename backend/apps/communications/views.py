@@ -15,10 +15,17 @@ from apps.common.permissions import (
 from apps.customers.models import Customer
 from apps.invoicing.models import Invoice
 
-from .models import CommunicationLog
+from .config import all_resolved
+from .models import CommunicationLog, IntegrationSetting
 from .providers import send_email as send_email_provider
 from .providers import send_sms as send_sms_provider
-from .serializers import CommunicationLogSerializer, SendMessageSerializer
+from .serializers import (
+    CommunicationLogSerializer,
+    IntegrationSettingsBulkSerializer,
+    SendMessageSerializer,
+    TestEmailSerializer,
+    TestSMSSerializer,
+)
 
 
 def _resolve_recipients(payload) -> list[Customer]:
@@ -125,3 +132,75 @@ class CommunicationLogViewSet(viewsets.ModelViewSet):
         "retrieve": (SUPER_ADMIN, CS_OFFICER, OPERATIONS, MANAGER),
         "destroy": (SUPER_ADMIN,),
     }
+
+
+class IntegrationSettingsView(APIView):
+    """GET resolved settings (DB+env merged), PUT bulk-update DB values.
+
+    Super Admin only — credentials are sensitive.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, HasRolePermission]
+    required_roles = {"*": (SUPER_ADMIN,)}
+
+    def get(self, request):
+        resolved = all_resolved()
+        return Response({"settings": list(resolved.values())})
+
+    def put(self, request):
+        serializer = IntegrationSettingsBulkSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        incoming = serializer.validated_data["settings"]
+        allowed_keys = {key for key, _ in IntegrationSetting.KEYS}
+
+        for key, value in incoming.items():
+            if key not in allowed_keys:
+                continue
+            value = (value or "").strip()
+            if value == "":
+                IntegrationSetting.objects.filter(pk=key).delete()
+            else:
+                IntegrationSetting.objects.update_or_create(
+                    pk=key, defaults={"value": value},
+                )
+        return Response({"settings": list(all_resolved().values())})
+
+
+class TestSMSView(APIView):
+    permission_classes = [permissions.IsAuthenticated, HasRolePermission]
+    required_roles = {"*": (SUPER_ADMIN,)}
+
+    def post(self, request):
+        payload = TestSMSSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        result = send_sms_provider(
+            payload.validated_data["phone"],
+            payload.validated_data["message"],
+        )
+        ok = result.get("status") in {"sent", "logged"}
+        return Response(
+            {"ok": ok, **result},
+            status=status.HTTP_200_OK if ok else status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class TestEmailView(APIView):
+    permission_classes = [permissions.IsAuthenticated, HasRolePermission]
+    required_roles = {"*": (SUPER_ADMIN,)}
+
+    def post(self, request):
+        payload = TestEmailSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        try:
+            result = send_email_provider(
+                payload.validated_data["email"],
+                payload.validated_data["subject"],
+                payload.validated_data["message"],
+            )
+        except Exception as exc:
+            result = {"status": "failed", "error": str(exc)}
+        ok = result.get("status") in {"sent", "logged"}
+        return Response(
+            {"ok": ok, **result},
+            status=status.HTTP_200_OK if ok else status.HTTP_400_BAD_REQUEST,
+        )

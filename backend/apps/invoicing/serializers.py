@@ -46,6 +46,13 @@ class InvoiceSerializer(serializers.ModelSerializer):
         queryset=CustomerService.objects.all(),
         source="customer_service", write_only=True, required=False, allow_null=True,
     )
+    tax = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, default=Decimal("0"),
+    )
+    total = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, read_only=True,
+    )
+    due_date = serializers.DateField(required=False)
     payments = PaymentSerializer(many=True, read_only=True)
     balance = serializers.SerializerMethodField()
 
@@ -58,6 +65,12 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "created_at", "updated_at",
         )
         read_only_fields = ("id", "invoice_number", "customer_service", "payments", "created_at", "updated_at")
+
+    def validate(self, attrs):
+        amount = attrs.get("amount") or (self.instance and self.instance.amount) or Decimal("0")
+        tax = attrs.get("tax", self.instance.tax if self.instance else Decimal("0")) or Decimal("0")
+        attrs["total"] = Decimal(amount) + Decimal(tax)
+        return attrs
 
     def get_balance(self, obj):
         paid = sum((p.amount for p in obj.payments.all()), Decimal("0"))
