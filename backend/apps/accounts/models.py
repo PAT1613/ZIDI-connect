@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.auth.models import AbstractUser, BaseUserManager # type: ignore
 from django.db import models
 
 
