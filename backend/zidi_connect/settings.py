@@ -228,6 +228,11 @@ AT_USERNAME = os.environ.get("AT_USERNAME", "sandbox")
 AT_API_KEY = os.environ.get("AT_API_KEY", "")
 AT_SENDER_ID = os.environ.get("AT_SENDER_ID", "ZIDI")
 
+COMPANY_NAME = os.environ.get("COMPANY_NAME", "ZIDI Connect")
+COMPANY_PHONE = os.environ.get("COMPANY_PHONE", "")
+COMPANY_EMAIL = os.environ.get("COMPANY_EMAIL", "")
+COMPANY_ADDRESS = os.environ.get("COMPANY_ADDRESS", "")
+
 RENEWAL_URL_BASE = os.environ.get(
     "RENEWAL_URL_BASE", "http://localhost:5173/renew"
 )

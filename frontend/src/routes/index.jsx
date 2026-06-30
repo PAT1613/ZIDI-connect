@@ -15,6 +15,7 @@ import Escalations from '../pages/Escalations';
 import Reports from '../pages/Reports';
 import Users from '../pages/Users';
 import AuditLogs from '../pages/AuditLogs';
+import Settings from '../pages/Settings';
 import NotFound from '../pages/NotFound';
 import Forbidden from '../pages/Forbidden';
 import { ROLES } from '../lib/constants';
@@ -71,6 +72,14 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.MANAGER]}>
                 <AuditLogs />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'settings',
+            element: (
+              <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                <Settings />
               </ProtectedRoute>
             ),
           },

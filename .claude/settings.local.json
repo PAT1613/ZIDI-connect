@@ -28,7 +28,8 @@
       "Bash(py -3 manage.py runserver 0.0.0.0:8000)",
       "Bash(py -3 manage.py check)",
       "Bash(python -c \"import sys,json;[print\\('-', r['name'], r['id']\\) for r in json.load\\(sys.stdin\\).get\\('results',[]\\)]\")",
-      "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('access_ok:', bool\\(d.get\\('access'\\)\\)\\);print\\('user:', d.get\\('user', {}\\).get\\('email'\\),'/',d.get\\('user', {}\\).get\\('role',{}\\).get\\('name'\\)\\)\")"
+      "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('access_ok:', bool\\(d.get\\('access'\\)\\)\\);print\\('user:', d.get\\('user', {}\\).get\\('email'\\),'/',d.get\\('user', {}\\).get\\('role',{}\\).get\\('name'\\)\\)\")",
+      "Bash(xargs wc -l)"
     ]
   }
 }
