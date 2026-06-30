@@ -263,3 +263,6 @@ LOGGING = {
         },
     },
 }
+AT_USERNAME = os.getenv("AT_USERNAME", "sandbox")
+AT_API_KEY = os.getenv("AT_API_KEY")
+AT_SENDER_ID = os.getenv("AT_SENDER_ID", "")
