@@ -37,12 +37,23 @@ class Invoice(BaseModel):
     issued_date = models.DateField(default=date.today)
     due_date = models.DateField()
     notes = models.TextField(blank=True)
+    # The billing-period this invoice covers, e.g. "2026-07-15" — the subscription's
+    # due_date at the moment it was billed. Blank for manually-created invoices.
+    # Enforced unique per subscription so the auto-invoice task is idempotent.
+    billing_period_key = models.CharField(max_length=32, blank=True, db_index=True)
 
     class Meta:
         ordering = ("-issued_date", "-created_at")
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["due_date"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer_service", "billing_period_key"],
+                condition=models.Q(billing_period_key__gt=""),
+                name="uniq_invoice_period_per_subscription",
+            ),
         ]
 
     def __str__(self) -> str:

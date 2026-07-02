@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import csv
 from datetime import datetime
-from io import BytesIO
+from io import BytesIO, StringIO
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
@@ -37,6 +38,15 @@ def rows_to_xlsx(title: str, rows: list[list]) -> bytes:
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def rows_to_csv(rows: list[list]) -> bytes:
+    """Render rows (including the header) as UTF-8 CSV bytes."""
+    buf = StringIO()
+    writer = csv.writer(buf)
+    for row in rows:
+        writer.writerow([("" if v is None else str(v)) for v in row])
+    return buf.getvalue().encode("utf-8")
 
 
 def rows_to_pdf(title: str, rows: list[list]) -> bytes:

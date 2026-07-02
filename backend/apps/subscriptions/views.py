@@ -16,8 +16,8 @@ from apps.common.permissions import (
     SUPER_ADMIN,
 )
 
-from .models import CustomerService
-from .serializers import CustomerServiceSerializer
+from .models import CustomerService, UsageRecord
+from .serializers import CustomerServiceSerializer, UsageRecordSerializer
 
 
 class CustomerServiceViewSet(SuperAdminCascadeDestroyMixin, viewsets.ModelViewSet):
@@ -63,3 +63,26 @@ class CustomerServiceViewSet(SuperAdminCascadeDestroyMixin, viewsets.ModelViewSe
         sub.end_date = date.today()
         sub.save(update_fields=["status", "end_date", "updated_at"])
         return Response(self.get_serializer(sub).data)
+
+
+class UsageRecordViewSet(viewsets.ModelViewSet):
+    """CRUD for per-subscription usage records (Req 2.2).
+
+    Filter by subscription via ``?subscription=<uuid>``. Ordering by
+    ``period_end`` is descending by default so the latest record floats to top.
+    """
+
+    queryset = UsageRecord.objects.select_related("subscription").all()
+    serializer_class = UsageRecordSerializer
+    permission_classes = [permissions.IsAuthenticated, HasRolePermission]
+    search_fields = ("unit", "notes")
+    ordering_fields = ("period_end", "period_start", "recorded_at", "quantity")
+    filterset_fields = ("subscription",)
+    required_roles = {
+        "list": (SUPER_ADMIN, CS_OFFICER, FINANCE, OPERATIONS, MANAGER),
+        "retrieve": (SUPER_ADMIN, CS_OFFICER, FINANCE, OPERATIONS, MANAGER),
+        "create": (SUPER_ADMIN, CS_OFFICER, OPERATIONS),
+        "update": (SUPER_ADMIN, CS_OFFICER, OPERATIONS),
+        "partial_update": (SUPER_ADMIN, CS_OFFICER, OPERATIONS),
+        "destroy": (SUPER_ADMIN,),
+    }

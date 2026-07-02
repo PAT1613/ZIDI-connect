@@ -168,6 +168,11 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "apps.common.exceptions.zidi_exception_handler",
     "PAGE_SIZE": 25,
+    # Reports use ``?format=pdf|xlsx|csv`` to pick an export format inside the
+    # view. Without this override, DRF's content negotiation intercepts ``format=``
+    # first and 404s unless a matching Renderer is registered — which breaks the
+    # reports and accounting-export endpoints.
+    "URL_FORMAT_OVERRIDE": None,
 }
 
 SIMPLE_JWT = {
@@ -198,6 +203,11 @@ CORS_ALLOWED_ORIGINS = env_list(
 )
 CORS_ALLOW_CREDENTIALS = True
 
+# Shared secret for server-to-server webhooks (delivery reports, etc.).
+# Callers must send it in the ``X-Webhook-Secret`` header. If unset, all
+# webhook requests are rejected 403.
+WEBHOOK_SHARED_SECRET = os.environ.get("WEBHOOK_SHARED_SECRET", "")
+
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/1")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/2")
 CELERY_TIMEZONE = TIME_ZONE
@@ -209,6 +219,10 @@ CELERY_BEAT_SCHEDULE = {
     "scan-due-subscriptions-hourly": {
         "task": "apps.notifications.tasks.scan_due_subscriptions",
         "schedule": crontab(minute=0),
+    },
+    "generate-due-invoices-daily": {
+        "task": "apps.invoicing.tasks.generate_due_invoices",
+        "schedule": crontab(hour=2, minute=0),
     },
 }
 

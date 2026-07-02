@@ -26,6 +26,7 @@ class IntegrationSetting(TimeStampedModel):
         ("COMPANY_PHONE", "Company Phone"),
         ("COMPANY_EMAIL", "Company Email"),
         ("COMPANY_ADDRESS", "Company Address"),
+        ("REMINDER_DAYS", "Reminder Intervals (JSON list of days)"),
     )
 
     SECRET_KEYS = {"AT_API_KEY", "EMAIL_HOST_PASSWORD"}

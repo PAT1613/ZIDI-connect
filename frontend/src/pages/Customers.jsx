@@ -23,7 +23,7 @@ import Textarea from '../components/ui/Textarea';
 import Select from '../components/ui/Select';
 import { formatDate } from '../lib/format';
 
-const EMPTY = { full_name: '', phone: '', email: '', address: '', national_id: '', status: 'active', notes: '' };
+const EMPTY = { full_name: '', phone: '', email: '', address: '', national_id: '', status: 'active', preferred_channel: 'all', notes: '' };
 
 export default function Customers() {
   const { hasRole, user } = useAuth();
@@ -188,6 +188,18 @@ export default function Customers() {
               value={form.status}
               onChange={(e) => setForm({ ...form, status: e.target.value })}
               options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
+            />
+          </FormField>
+          <FormField label="Reminder channel">
+            <Select
+              value={form.preferred_channel || 'all'}
+              onChange={(e) => setForm({ ...form, preferred_channel: e.target.value })}
+              options={[
+                { value: 'all', label: 'All channels' },
+                { value: 'sms', label: 'SMS only' },
+                { value: 'email', label: 'Email only' },
+                { value: 'in_app', label: 'In-app only' },
+              ]}
             />
           </FormField>
           <FormField label="Notes" className="sm:col-span-2">

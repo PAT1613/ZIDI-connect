@@ -19,6 +19,29 @@ class IntegrationSettingsBulkSerializer(serializers.Serializer):
         child=serializers.CharField(allow_blank=True, required=False),
     )
 
+    def validate_settings(self, value):
+        # Per-key validation. Free-form keys pass through; keys with structured
+        # payloads (JSON etc.) get parsed and shape-checked.
+        import json
+
+        reminder_days = value.get("REMINDER_DAYS")
+        if reminder_days not in (None, ""):
+            try:
+                parsed = json.loads(reminder_days)
+            except (TypeError, ValueError):
+                raise serializers.ValidationError(
+                    {"REMINDER_DAYS": "Must be a JSON array (e.g. [14, 7, 3])."}
+                )
+            if not isinstance(parsed, list) or not parsed:
+                raise serializers.ValidationError(
+                    {"REMINDER_DAYS": "Must be a non-empty JSON array."}
+                )
+            if not all(isinstance(n, int) and n > 0 for n in parsed):
+                raise serializers.ValidationError(
+                    {"REMINDER_DAYS": "All entries must be positive integers."}
+                )
+        return value
+
 
 class TestSMSSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20)
@@ -60,3 +83,30 @@ class SendMessageSerializer(serializers.Serializer):
     )
     subject = serializers.CharField(required=False, allow_blank=True, max_length=160)
     message = serializers.CharField()
+
+
+class BulkSendSerializer(serializers.Serializer):
+    """Payload for /communications/bulk/ (async fan-out)."""
+
+    channel = serializers.ChoiceField(choices=("sms", "email"))
+    subject = serializers.CharField(required=False, allow_blank=True, max_length=160)
+    message = serializers.CharField()
+    # Recipient selector: pick one of the two.
+    customer_ids = serializers.ListField(
+        child=serializers.UUIDField(), required=False, allow_empty=True,
+    )
+    filter = serializers.ChoiceField(
+        choices=("all_active", "selected", "overdue"),
+        required=False, default="selected",
+    )
+
+    def validate(self, attrs):
+        if attrs["channel"] == "email" and not attrs.get("subject"):
+            raise serializers.ValidationError(
+                {"subject": "Subject is required for email."}
+            )
+        if attrs.get("filter", "selected") == "selected" and not attrs.get("customer_ids"):
+            raise serializers.ValidationError(
+                {"customer_ids": "Provide customer_ids or set filter to all_active/overdue."}
+            )
+        return attrs

@@ -147,3 +147,48 @@ REPORTS = {
     "payments": ("Payments Report", payments_rows),
     "notifications": ("Notifications Report", notifications_rows),
 }
+
+
+def accounting_export_rows():
+    """Flat, importer-friendly view of finance data.
+
+    One row per invoice, plus one row per payment. Common columns so a
+    downstream mapping into QuickBooks / Xero can key on ``type`` +
+    ``reference``.
+    """
+    rows = [
+        [
+            "type", "reference", "date", "customer_code", "customer_name",
+            "invoice_number", "amount", "tax", "total", "method", "status",
+        ],
+    ]
+    for inv in Invoice.objects.select_related("customer").order_by("issued_date", "created_at"):
+        rows.append([
+            "invoice",
+            inv.invoice_number,
+            inv.issued_date.isoformat() if inv.issued_date else "",
+            getattr(inv.customer, "customer_code", ""),
+            inv.customer.full_name if inv.customer else "",
+            inv.invoice_number,
+            _money(inv.amount),
+            _money(inv.tax),
+            _money(inv.total),
+            "",  # method N/A on invoice row
+            inv.status,
+        ])
+    for pay in Payment.objects.select_related("invoice__customer").order_by("paid_at"):
+        cust = getattr(pay.invoice, "customer", None)
+        rows.append([
+            "payment",
+            pay.reference or f"PAY-{pay.id}",
+            pay.paid_at.strftime("%Y-%m-%d") if pay.paid_at else "",
+            getattr(cust, "customer_code", "") if cust else "",
+            cust.full_name if cust else "",
+            pay.invoice.invoice_number if pay.invoice else "",
+            _money(pay.amount),
+            "",  # tax N/A
+            _money(pay.amount),
+            pay.method,
+            "received",
+        ])
+    return rows

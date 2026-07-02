@@ -8,7 +8,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         model = Customer
         fields = (
             "id", "customer_code", "full_name", "phone", "email", "address",
-            "national_id", "status", "registration_date", "notes",
+            "national_id", "status", "preferred_channel", "registration_date", "notes",
             "created_at", "updated_at",
         )
         read_only_fields = ("id", "customer_code", "registration_date", "created_at", "updated_at")

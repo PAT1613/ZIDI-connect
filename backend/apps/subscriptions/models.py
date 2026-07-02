@@ -61,3 +61,31 @@ class CustomerService(BaseModel):
         self.due_date = base + timedelta(days=days)
         self.renewal_date = self.due_date
         self.status = self.STATUS_ACTIVE
+
+
+class UsageRecord(BaseModel):
+    """Lightweight, unit-agnostic usage tracking per subscription.
+
+    The functional spec (Req 2.2) mentions 'track service usage' without
+    defining a metric, so this stays generic — a period, a quantity, and a
+    free-form unit (calls, GB, days, whatever the service uses).
+    """
+
+    subscription = models.ForeignKey(
+        CustomerService, on_delete=models.CASCADE, related_name="usage_records",
+    )
+    period_start = models.DateField()
+    period_end = models.DateField()
+    quantity = models.DecimalField(max_digits=14, decimal_places=2)
+    unit = models.CharField(max_length=32, blank=True)
+    notes = models.CharField(max_length=255, blank=True)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-period_end", "-recorded_at")
+        indexes = [
+            models.Index(fields=["subscription", "period_end"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"Usage {self.subscription_id} {self.period_start}→{self.period_end}: {self.quantity} {self.unit}"

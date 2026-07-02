@@ -20,12 +20,14 @@ from .models import CommunicationLog, IntegrationSetting
 from .providers import send_email as send_email_provider
 from .providers import send_sms as send_sms_provider
 from .serializers import (
+    BulkSendSerializer,
     CommunicationLogSerializer,
     IntegrationSettingsBulkSerializer,
     SendMessageSerializer,
     TestEmailSerializer,
     TestSMSSerializer,
 )
+from .tasks import render_template, send_comms_log
 
 
 def _resolve_recipients(payload) -> list[Customer]:
@@ -117,6 +119,54 @@ class SendEmailView(_SendBase):
             sent += 1 if ok else 0
             failed += 0 if ok else 1
         return Response({"sent": sent, "failed": failed, "total": len(recipients)})
+
+
+class BulkSendView(_SendBase):
+    """POST /communications/bulk/ — async fan-out with template substitution.
+
+    Creates one CommunicationLog per recipient (status=queued) and dispatches
+    a Celery task per row. Returns ``{queued, skipped, total}``. Skipped
+    recipients are those missing the target field (phone for SMS, email for email).
+
+    Template tokens supported per-recipient: ``{name}`` ``{email}`` ``{phone}``.
+    """
+
+    def post(self, request):
+        serializer = BulkSendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        recipients = _resolve_recipients(data)
+        if not recipients:
+            return Response({"detail": "No recipients matched."}, status=status.HTTP_400_BAD_REQUEST)
+
+        channel = data["channel"]
+        message_template = data["message"]
+        subject_template = data.get("subject") or ""
+        sender = request.user if request.user.is_authenticated else None
+
+        queued = 0
+        skipped = 0
+        for customer in recipients:
+            has_target = bool(
+                (channel == "sms" and (customer.phone or "").strip())
+                or (channel == "email" and (customer.email or "").strip())
+            )
+            if not has_target:
+                skipped += 1
+                continue
+            log = CommunicationLog.objects.create(
+                sender=sender,
+                customer=customer,
+                channel=channel,
+                subject=render_template(subject_template, customer),
+                message=render_template(message_template, customer),
+                status=CommunicationLog.STATUS_QUEUED,
+            )
+            send_comms_log.delay(str(log.id))
+            queued += 1
+
+        return Response({"queued": queued, "skipped": skipped, "total": len(recipients)})
 
 
 class CommunicationLogViewSet(viewsets.ModelViewSet):

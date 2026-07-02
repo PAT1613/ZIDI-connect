@@ -52,6 +52,19 @@ def get_int(key: str, default: int = 0) -> int:
         return default
 
 
+def get_json(key: str, default: Any = None) -> Any:
+    """Return the setting parsed as JSON, or the default on missing/invalid."""
+    import json
+
+    raw = get_setting(key, "")
+    if not raw:
+        return default
+    try:
+        return json.loads(raw)
+    except (TypeError, ValueError):
+        return default
+
+
 def all_resolved() -> dict[str, dict]:
     """Return the resolved state of every integration key for the Settings UI.
 

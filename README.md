@@ -22,9 +22,14 @@ See [`TECH_SPEC.md`](./TECH_SPEC.md) for the locked architecture contract.
 ## Quick start (local dev with Docker)
 
 ```bash
-# 1. Clone, copy env, edit secrets
+# 1. Clone and prepare env
 cp .env.example .env
-nano .env                          # set DJANGO_SECRET_KEY, AT_API_KEY, EMAIL_*
+# Set these in .env before first boot (see .env.example for the full list):
+#   DJANGO_SECRET_KEY           — long random string
+#   DJANGO_SUPERUSER_EMAIL      — bootstrap admin email (optional)
+#   DJANGO_SUPERUSER_PASSWORD   — bootstrap admin password (optional; STRONG)
+#   AT_API_KEY, EMAIL_*         — provider credentials
+#   WEBHOOK_SHARED_SECRET       — required for delivery-callback POSTs
 
 # 2. Build & start everything
 docker compose up -d --build
@@ -36,10 +41,15 @@ docker compose logs -f backend
 #    Frontend (Vite dev):  http://localhost:5173
 #    Backend API:          http://localhost:8000/api/v1/
 #    Django Admin:         http://localhost:8000/admin/
-#    Default superuser:    admin@zidi.local / ChangeMe!123
 ```
 
-The backend `entrypoint.sh` waits for Postgres, runs migrations, collects static files, and bootstraps the default roles + superuser on first boot.
+The backend `entrypoint.sh` waits for Postgres, runs migrations, collects static files, and seeds the default roles on every boot. **The superuser is only created when `DJANGO_SUPERUSER_EMAIL` and `DJANGO_SUPERUSER_PASSWORD` are both set** — there is no fallback default password. If those env vars are unset, create a superuser manually:
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+```
+
+For production, see [`DEPLOYMENT.md`](./DEPLOYMENT.md) — it covers `DEBUG=False`, secret rotation, allowed-hosts hardening, and webhook secrets.
 
 ---
 

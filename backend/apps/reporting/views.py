@@ -16,8 +16,8 @@ from apps.common.permissions import (
     SUPER_ADMIN,
 )
 
-from .exports import rows_to_pdf, rows_to_xlsx
-from .queries import REPORTS, dashboard_payload
+from .exports import rows_to_csv, rows_to_pdf, rows_to_xlsx
+from .queries import REPORTS, accounting_export_rows, dashboard_payload
 
 REPORT_ROLES = {
     "customers": (SUPER_ADMIN, CS_OFFICER, MANAGER),
@@ -61,10 +61,55 @@ class _ReportExportView(APIView):
             )
             return response
 
+        if fmt == "csv":
+            content = rows_to_csv(rows)
+            response = HttpResponse(content, content_type="text/csv")
+            response["Content-Disposition"] = (
+                f"attachment; filename={self.report_key}-{today}.csv"
+            )
+            return response
+
         content = rows_to_pdf(title, rows)
         response = HttpResponse(content, content_type="application/pdf")
         response["Content-Disposition"] = (
             f"attachment; filename={self.report_key}-{today}.pdf"
+        )
+        return response
+
+
+class AccountingExportView(APIView):
+    """GET /reports/accounting-export/?format=csv (default) | xlsx
+
+    A finance-focused, importer-friendly dump of invoices + payments. Kept
+    intentionally boring so it round-trips into QuickBooks / Xero staging tables
+    without transformation. This is the integration seam; a future webhook /
+    push-to-accounting-API would live in the same view.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, HasRolePermission]
+    required_roles = {"get": (SUPER_ADMIN, FINANCE, MANAGER), "*": (SUPER_ADMIN, FINANCE, MANAGER)}
+
+    def get(self, request):
+        rows = accounting_export_rows()
+        fmt = (request.query_params.get("format") or "csv").lower()
+        today = date.today().isoformat()
+
+        if fmt == "xlsx":
+            content = rows_to_xlsx("Accounting Export", rows)
+            response = HttpResponse(
+                content,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+            response["Content-Disposition"] = (
+                f"attachment; filename=accounting-export-{today}.xlsx"
+            )
+            return response
+
+        # Default: CSV — the common denominator for accounting imports.
+        content = rows_to_csv(rows)
+        response = HttpResponse(content, content_type="text/csv")
+        response["Content-Disposition"] = (
+            f"attachment; filename=accounting-export-{today}.csv"
         )
         return response
 

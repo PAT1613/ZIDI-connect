@@ -9,7 +9,7 @@ from apps.customers.serializers import CustomerSerializer
 from apps.services.models import Service
 from apps.services.serializers import ServiceSerializer
 
-from .models import CustomerService, _cycle_length
+from .models import CustomerService, UsageRecord, _cycle_length
 
 
 class CustomerServiceSerializer(serializers.ModelSerializer):
@@ -40,3 +40,18 @@ class CustomerServiceSerializer(serializers.ModelSerializer):
             validated_data["due_date"] = start + timedelta(days=cycle)
             validated_data["renewal_date"] = validated_data["due_date"]
         return super().create(validated_data)
+
+
+class UsageRecordSerializer(serializers.ModelSerializer):
+    subscription_id = serializers.PrimaryKeyRelatedField(
+        queryset=CustomerService.objects.all(), source="subscription", write_only=True,
+    )
+
+    class Meta:
+        model = UsageRecord
+        fields = (
+            "id", "subscription", "subscription_id",
+            "period_start", "period_end", "quantity", "unit", "notes",
+            "recorded_at", "created_at", "updated_at",
+        )
+        read_only_fields = ("id", "subscription", "recorded_at", "created_at", "updated_at")

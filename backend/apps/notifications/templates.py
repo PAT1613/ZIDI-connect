@@ -16,3 +16,14 @@ def render_reminder(customer, service, due_date, amount, days_left) -> tuple[str
     else:
         subject = f"OVERDUE: {service.name}"
     return subject, body
+
+
+def render_invoice_issued(customer, service, invoice_number, amount, due_date) -> tuple[str, str]:
+    """Returns (subject, body) for an 'invoice issued' notification."""
+    subject = f"Invoice {invoice_number} — {service.name}"
+    body = (
+        f"Dear {customer.full_name}, invoice {invoice_number} has been issued for "
+        f"{service.name}. Amount: KES {amount}. Due on {due_date.strftime('%Y-%m-%d')}. "
+        f"— ZIDI Connect"
+    )
+    return subject, body
